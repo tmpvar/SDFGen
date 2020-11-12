@@ -4,7 +4,7 @@
 //This code is public domain. Feel free to mess with it, let me know if you like it.
 
 #include "makelevelset3.h"
-#include "config.h"
+//#include "config.h"
 
 #ifdef HAVE_VTK
   #include <vtkImageData.h>
@@ -163,14 +163,30 @@ int main(int argc, char* argv[]) {
     //Very hackily strip off file suffix.
     outname = filename.substr(0, filename.size()-4) + std::string(".sdf");
     std::cout << "Writing results to: " << outname << "\n";
-    
-    std::ofstream outfile( outname.c_str());
-    outfile << phi_grid.ni << " " << phi_grid.nj << " " << phi_grid.nk << std::endl;
-    outfile << min_box[0] << " " << min_box[1] << " " << min_box[2] << std::endl;
-    outfile << dx << std::endl;
-    for(unsigned int i = 0; i < phi_grid.a.size(); ++i) {
-      outfile << phi_grid.a[i] << std::endl;
+
+    // 16 bit binary output implemented by sebbbi
+    Vec3f diagonal = Vec3f(
+        dx * float(phi_grid.ni),
+        dx * float(phi_grid.nj),
+        dx * float(phi_grid.nk));
+
+    float diagonal_length = mag(diagonal);
+
+    std::vector<uint16_t> voxels_u16(phi_grid.a.size());
+    for (unsigned long i = 0; i < phi_grid.a.size(); ++i)
+    {
+        float v = phi_grid.a[i];
+        float v_01 = (v / diagonal_length) * 0.5f + 0.5f;
+        voxels_u16[i] = uint16_t(v_01 * 65535.0f);
     }
+
+    std::ofstream outfile( outname.c_str(), std::ofstream::binary);
+    outfile.write((char*)&phi_grid.ni, sizeof(phi_grid.ni));
+    outfile.write((char*)&phi_grid.nj, sizeof(phi_grid.nj));
+    outfile.write((char*)&phi_grid.nk, sizeof(phi_grid.nk));
+    outfile.write((char*)&min_box, sizeof(min_box));
+    outfile.write((char*)&dx, sizeof(dx));
+    outfile.write((char*)voxels_u16.data(), voxels_u16.size() * sizeof(uint16_t));
     outfile.close();
   #endif
 
