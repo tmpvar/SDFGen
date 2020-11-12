@@ -1,3 +1,6 @@
+# Modifications
+* Added binary 16 bit output support
+
 # SDFGen
 A simple commandline utility to generate grid-based signed distance field (level set) generator from triangle meshes, using code from Robert Bridson's website.
 
