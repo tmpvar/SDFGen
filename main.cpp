@@ -20,9 +20,13 @@
 #include <sstream>
 #include <limits>
 
+unsigned int align_up(unsigned int v, unsigned int align) {
+    return ((v + align - 1) / align) * align;
+}
+
 int main(int argc, char* argv[]) {
   
-  if(argc != 4) {
+  if(argc != 7) {
     std::cout << "SDFGen - A utility for converting closed oriented triangle meshes into grid-based signed distance fields.\n";
     std::cout << "\nThe output file format is:";
     std::cout << "<ni> <nj> <nk>\n";
@@ -37,11 +41,14 @@ int main(int argc, char* argv[]) {
 
     std::cout << "The output filename will match that of the input, with the OBJ suffix replaced with SDF.\n\n";
 
-    std::cout << "Usage: SDFGen <filename> <dx> <padding>\n\n";
+    std::cout << "Usage: SDFGen <filename> <dx> <padmin> <padmax> <align> <padmax_postalign>\n\n";
     std::cout << "Where:\n";
     std::cout << "\t<filename> specifies a Wavefront OBJ (text) file representing a *triangle* mesh (no quad or poly meshes allowed). File must use the suffix \".obj\".\n";
     std::cout << "\t<dx> specifies the length of grid cell in the resulting distance field.\n";
-    std::cout << "\t<padding> specifies the number of cells worth of padding between the object bound box and the boundary of the distance field grid. Minimum is 1.\n\n";
+    std::cout << "\t<padmin> specifies the number of cells worth of padding between the object bound box min and the boundary of the distance field grid. Minimum is 1.\n\n";
+	std::cout << "\t<padmax> specifies the number of cells worth of padding between the object bound box max and the boundary of the distance field grid.\n\n";
+	std::cout << "\t<align> specifies the alignment of the bounding box size (round up).\n\n";
+	std::cout << "\t<padmax_postalign> specifies the number of cells worth of padding added to box max after align.\n\n";
     
     exit(-1);
   }
@@ -57,10 +64,22 @@ int main(int argc, char* argv[]) {
   arg2 >> dx;
   
   std::stringstream arg3(argv[3]);
-  int padding;
-  arg3 >> padding;
+  int padmin;
+  arg3 >> padmin;
+  if(padmin < 1) padmin = 1;
 
-  if(padding < 1) padding = 1;
+  std::stringstream arg4(argv[4]);
+  int padmax;
+  arg4 >> padmax;
+
+  std::stringstream arg5(argv[5]);
+  int align;
+  arg5 >> align;
+
+  std::stringstream arg6(argv[6]);
+  int padmax_postalign;
+  arg6 >> padmax_postalign;
+
   //start with a massive inside out bound box.
   Vec3f min_box(std::numeric_limits<float>::max(),std::numeric_limits<float>::max(),std::numeric_limits<float>::max()), 
     max_box(-std::numeric_limits<float>::max(),-std::numeric_limits<float>::max(),-std::numeric_limits<float>::max());
@@ -113,9 +132,15 @@ int main(int argc, char* argv[]) {
 
   //Add padding around the box.
   Vec3f unit(1,1,1);
-  min_box -= padding*dx*unit;
-  max_box += padding*dx*unit;
+  min_box -= padmin*dx*unit;
+  max_box += padmax*dx*unit;
   Vec3ui sizes = Vec3ui((max_box - min_box)/dx);
+
+  sizes[0] = align_up(sizes[0], align);
+  sizes[1] = align_up(sizes[1], align);
+  sizes[2] = align_up(sizes[2], align);
+
+  sizes += Vec3ui(padmax_postalign);
   
   std::cout << "Bound box size: (" << min_box << ") to (" << max_box << ") with dimensions " << sizes << "." << std::endl;
 
