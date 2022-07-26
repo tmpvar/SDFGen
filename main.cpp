@@ -4,7 +4,7 @@
 //This code is public domain. Feel free to mess with it, let me know if you like it.
 
 #include "makelevelset3.h"
-//#include "config.h"
+#include <config-generated.h>
 
 #ifdef HAVE_VTK
   #include <vtkImageData.h>
