@@ -400,8 +400,8 @@ inline Vec<N,int> round(const Vec<N,T> &a)
 { 
    Vec<N,int> rounded;
    for(unsigned int i=0; i<N; ++i)
-      rounded.v[i]=lround(a.v[i]);
-   return rounded; 
+      rounded.v[i]=int(lround(a.v[i]));
+   return rounded;
 }
 
 template<unsigned int N, class T>
