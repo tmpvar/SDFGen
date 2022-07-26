@@ -20,17 +20,25 @@
 #include <sstream>
 #include <limits>
 
+#include "stl_reader.h"
+
 unsigned int align_up(unsigned int v, unsigned int align) {
     return ((v + align - 1) / align) * align;
 }
 
 void read_obj_file(
-  std::ifstream &infile,
+  const std::string &filename,
   std::vector<Vec3f> &vertList,
   std::vector<Vec3ui> &faceList,
   Vec3f &min_box,
   Vec3f &max_box
 ) {
+  std::ifstream infile(filename);
+  if(!infile) {
+    std::cerr << "Failed to open. Terminating.\n";
+    exit(-1);
+  }
+
   int ignored_lines = 0;
   std::string line;
   while(!infile.eof()) {
@@ -68,6 +76,33 @@ void read_obj_file(
   std::cout << "Read in " << vertList.size() << " vertices and " << faceList.size() << " faces." << std::endl;
 }
 
+void read_stl_file(
+  const std::string &filename,
+  std::vector<Vec3f> &vertList,
+  std::vector<Vec3ui> &faceList,
+  Vec3f &min_box,
+  Vec3f &max_box
+) {
+  try {
+    stl_reader::StlMesh <float, unsigned int> mesh (filename);
+    for(size_t itri = 0; itri < mesh.num_tris(); ++itri) {
+      for(size_t icorner = 0; icorner < 3; ++icorner) {
+        const unsigned int *index = mesh.tri_corner_inds(itri);
+        faceList.push_back(Vec3ui(index[0], index[1], index[2]));
+
+        const float* c = mesh.tri_corner_coords (itri, icorner);
+        Vec3f point(c[0], c[1], c[2]);
+        update_minmax(point, min_box, max_box);
+        vertList.push_back(point);
+      }
+    }
+  } catch (std::exception& e) {
+    std::cout << e.what() << std::endl;
+    exit(-1);
+  }
+}
+
+
 int main(int argc, char* argv[]) {
 
   if(argc != 7) {
@@ -97,8 +132,11 @@ int main(int argc, char* argv[]) {
   }
 
   std::string filename(argv[1]);
-  if(filename.size() < 5 || filename.substr(filename.size()-4) != std::string(".obj")) {
-    std::cerr << "Error: Expected OBJ file with filename of the form <name>.obj.\n";
+  const std::string extension = filename.substr(filename.size()-4);
+  const bool inputIsOBJ = extension != std::string(".obj");
+  const bool inputIsSTL = extension != std::string(".stl");
+  if(filename.size() < 5 || (!inputIsOBJ && !inputIsSTL)) {
+    std::cerr << "Error: Expected input file with filename of the form <name>.obj or <name>.stl.\n";
     exit(-1);
   }
 
@@ -129,15 +167,17 @@ int main(int argc, char* argv[]) {
 
   std::cout << "Reading data.\n";
 
-  std::ifstream infile(argv[1]);
-  if(!infile) {
-    std::cerr << "Failed to open. Terminating.\n";
-    exit(-1);
-  }
 
   std::vector<Vec3f> vertList;
   std::vector<Vec3ui> faceList;
-  read_obj_file(infile, vertList, faceList, min_box, max_box);
+
+  if (inputIsOBJ) {
+    read_obj_file(filename, vertList, faceList, min_box, max_box);
+  }
+
+  if (inputIsSTL) {
+    read_stl_file(filename, vertList, faceList, min_box, max_box);
+  }
 
   //Add padding around the box.
   Vec3f unit(1,1,1);
