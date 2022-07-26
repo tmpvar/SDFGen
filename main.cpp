@@ -24,78 +24,15 @@ unsigned int align_up(unsigned int v, unsigned int align) {
     return ((v + align - 1) / align) * align;
 }
 
-int main(int argc, char* argv[]) {
-  
-  if(argc != 7) {
-    std::cout << "SDFGen - A utility for converting closed oriented triangle meshes into grid-based signed distance fields.\n";
-    std::cout << "\nThe output file format is:";
-    std::cout << "<ni> <nj> <nk>\n";
-    std::cout << "<origin_x> <origin_y> <origin_z>\n";
-    std::cout << "<dx>\n";
-    std::cout << "<value_1> <value_2> <value_3> [...]\n\n";
-    
-    std::cout << "(ni,nj,nk) are the integer dimensions of the resulting distance field.\n";
-    std::cout << "(origin_x,origin_y,origin_z) is the 3D position of the grid origin.\n";
-    std::cout << "<dx> is the grid spacing.\n\n";
-    std::cout << "<value_n> are the signed distance data values, in ascending order of i, then j, then k.\n";
-
-    std::cout << "The output filename will match that of the input, with the OBJ suffix replaced with SDF.\n\n";
-
-    std::cout << "Usage: SDFGen <filename> <dx> <padmin> <padmax> <align> <padmax_postalign>\n\n";
-    std::cout << "Where:\n";
-    std::cout << "\t<filename> specifies a Wavefront OBJ (text) file representing a *triangle* mesh (no quad or poly meshes allowed). File must use the suffix \".obj\".\n";
-    std::cout << "\t<dx> specifies the length of grid cell in the resulting distance field.\n";
-    std::cout << "\t<padmin> specifies the number of cells worth of padding between the object bound box min and the boundary of the distance field grid. Minimum is 1.\n\n";
-	std::cout << "\t<padmax> specifies the number of cells worth of padding between the object bound box max and the boundary of the distance field grid.\n\n";
-	std::cout << "\t<align> specifies the alignment of the bounding box size (round up).\n\n";
-	std::cout << "\t<padmax_postalign> specifies the number of cells worth of padding added to box max after align.\n\n";
-    
-    exit(-1);
-  }
-
-  std::string filename(argv[1]);
-  if(filename.size() < 5 || filename.substr(filename.size()-4) != std::string(".obj")) {
-    std::cerr << "Error: Expected OBJ file with filename of the form <name>.obj.\n";
-    exit(-1);
-  }
-
-  std::stringstream arg2(argv[2]);
-  float dx;
-  arg2 >> dx;
-  
-  std::stringstream arg3(argv[3]);
-  int padmin;
-  arg3 >> padmin;
-  if(padmin < 1) padmin = 1;
-
-  std::stringstream arg4(argv[4]);
-  int padmax;
-  arg4 >> padmax;
-
-  std::stringstream arg5(argv[5]);
-  int align;
-  arg5 >> align;
-
-  std::stringstream arg6(argv[6]);
-  int padmax_postalign;
-  arg6 >> padmax_postalign;
-
-  //start with a massive inside out bound box.
-  Vec3f min_box(std::numeric_limits<float>::max(),std::numeric_limits<float>::max(),std::numeric_limits<float>::max()), 
-    max_box(-std::numeric_limits<float>::max(),-std::numeric_limits<float>::max(),-std::numeric_limits<float>::max());
-  
-  std::cout << "Reading data.\n";
-
-  std::ifstream infile(argv[1]);
-  if(!infile) {
-    std::cerr << "Failed to open. Terminating.\n";
-    exit(-1);
-  }
-
+void read_obj_file(
+  std::ifstream &infile,
+  std::vector<Vec3f> &vertList,
+  std::vector<Vec3ui> &faceList,
+  Vec3f &min_box,
+  Vec3f &max_box
+) {
   int ignored_lines = 0;
   std::string line;
-  std::vector<Vec3f> vertList;
-  std::vector<Vec3ui> faceList;
   while(!infile.eof()) {
     std::getline(infile, line);
 
@@ -117,18 +54,90 @@ int main(int argc, char* argv[]) {
     }
     else if( line.substr(0,2) == std::string("vn") ){
       std::cerr << "Obj-loader is not able to parse vertex normals, please strip them from the input file. \n";
-      exit(-2); 
+      exit(-2);
     }
     else {
-      ++ignored_lines; 
+      ++ignored_lines;
     }
   }
   infile.close();
-  
+
   if(ignored_lines > 0)
     std::cout << "Warning: " << ignored_lines << " lines were ignored since they did not contain faces or vertices.\n";
 
   std::cout << "Read in " << vertList.size() << " vertices and " << faceList.size() << " faces." << std::endl;
+}
+
+int main(int argc, char* argv[]) {
+
+  if(argc != 7) {
+    std::cout << "SDFGen - A utility for converting closed oriented triangle meshes into grid-based signed distance fields.\n";
+    std::cout << "\nThe output file format is:";
+    std::cout << "<ni> <nj> <nk>\n";
+    std::cout << "<origin_x> <origin_y> <origin_z>\n";
+    std::cout << "<dx>\n";
+    std::cout << "<value_1> <value_2> <value_3> [...]\n\n";
+
+    std::cout << "(ni,nj,nk) are the integer dimensions of the resulting distance field.\n";
+    std::cout << "(origin_x,origin_y,origin_z) is the 3D position of the grid origin.\n";
+    std::cout << "<dx> is the grid spacing.\n\n";
+    std::cout << "<value_n> are the signed distance data values, in ascending order of i, then j, then k.\n";
+
+    std::cout << "The output filename will match that of the input, with the OBJ suffix replaced with SDF.\n\n";
+
+    std::cout << "Usage: SDFGen <filename> <dx> <padmin> <padmax> <align> <padmax_postalign>\n\n";
+    std::cout << "Where:\n";
+    std::cout << "\t<filename> specifies a Wavefront OBJ (text) file representing a *triangle* mesh (no quad or poly meshes allowed). File must use the suffix \".obj\".\n";
+    std::cout << "\t<dx> specifies the length of grid cell in the resulting distance field.\n";
+    std::cout << "\t<padmin> specifies the number of cells worth of padding between the object bound box min and the boundary of the distance field grid. Minimum is 1.\n\n";
+	  std::cout << "\t<padmax> specifies the number of cells worth of padding between the object bound box max and the boundary of the distance field grid.\n\n";
+	  std::cout << "\t<align> specifies the alignment of the bounding box size (round up).\n\n";
+	  std::cout << "\t<padmax_postalign> specifies the number of cells worth of padding added to box max after align.\n\n";
+    exit(-1);
+  }
+
+  std::string filename(argv[1]);
+  if(filename.size() < 5 || filename.substr(filename.size()-4) != std::string(".obj")) {
+    std::cerr << "Error: Expected OBJ file with filename of the form <name>.obj.\n";
+    exit(-1);
+  }
+
+  std::stringstream arg2(argv[2]);
+  float dx;
+  arg2 >> dx;
+
+  std::stringstream arg3(argv[3]);
+  int padmin;
+  arg3 >> padmin;
+  if(padmin < 1) padmin = 1;
+
+  std::stringstream arg4(argv[4]);
+  int padmax;
+  arg4 >> padmax;
+
+  std::stringstream arg5(argv[5]);
+  int align;
+  arg5 >> align;
+
+  std::stringstream arg6(argv[6]);
+  int padmax_postalign;
+  arg6 >> padmax_postalign;
+
+  //start with a massive inside out bound box.
+  Vec3f min_box(std::numeric_limits<float>::max(),std::numeric_limits<float>::max(),std::numeric_limits<float>::max()),
+    max_box(-std::numeric_limits<float>::max(),-std::numeric_limits<float>::max(),-std::numeric_limits<float>::max());
+
+  std::cout << "Reading data.\n";
+
+  std::ifstream infile(argv[1]);
+  if(!infile) {
+    std::cerr << "Failed to open. Terminating.\n";
+    exit(-1);
+  }
+
+  std::vector<Vec3f> vertList;
+  std::vector<Vec3ui> faceList;
+  read_obj_file(infile, vertList, faceList, min_box, max_box);
 
   //Add padding around the box.
   Vec3f unit(1,1,1);
@@ -141,7 +150,7 @@ int main(int argc, char* argv[]) {
   sizes[2] = align_up(sizes[2], align);
 
   sizes += Vec3ui(padmax_postalign);
-  
+
   std::cout << "Bound box size: (" << min_box << ") to (" << max_box << ") with dimensions " << sizes << "." << std::endl;
 
   std::cout << "Computing signed distance field.\n";
@@ -162,9 +171,9 @@ int main(int argc, char* argv[]) {
     output_volume->SetSpacing(dx,dx,dx);
 
     vtkSmartPointer<vtkFloatArray> distance = vtkSmartPointer<vtkFloatArray>::New();
-    
+
     distance->SetNumberOfTuples(phi_grid.a.size());
-    
+
     output_volume->GetPointData()->AddArray(distance);
     distance->SetName("Distance");
 
