@@ -133,8 +133,8 @@ int main(int argc, char* argv[]) {
 
   std::string filename(argv[1]);
   const std::string extension = filename.substr(filename.size()-4);
-  const bool inputIsOBJ = extension != std::string(".obj");
-  const bool inputIsSTL = extension != std::string(".stl");
+  const bool inputIsOBJ = extension == std::string(".obj");
+  const bool inputIsSTL = extension == std::string(".stl");
   if(filename.size() < 5 || (!inputIsOBJ && !inputIsSTL)) {
     std::cerr << "Error: Expected input file with filename of the form <name>.obj or <name>.stl.\n";
     exit(-1);
