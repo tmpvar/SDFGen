@@ -126,6 +126,10 @@ void make_level_set3(const std::vector<Vec3ui> &tri, const std::vector<Vec3f> &x
    // we begin by initializing distances near the mesh, and figuring out intersection counts
    Vec3f ijkmin, ijkmax;
    for(unsigned int t=0; t<tri.size(); ++t){
+     if (t % 2000 == 0) {
+       std::cerr << t << " of " << tri.size() << " triangles processed" << std::endl;
+     }
+
      unsigned int p, q, r; assign(tri[t], p, q, r);
      // coordinates in grid to high precision
       double fip=((double)x[p][0]-origin[0])/dx, fjp=((double)x[p][1]-origin[1])/dx, fkp=((double)x[p][2]-origin[2])/dx;
@@ -159,6 +163,9 @@ void make_level_set3(const std::vector<Vec3ui> &tri, const std::vector<Vec3f> &x
          }
       }
    }
+
+   std::cerr << tri.size() << " of " << tri.size() << " triangles processed" << std::endl;
+
    // and now we fill in the rest of the distances with fast sweeping
    for(unsigned int pass=0; pass<2; ++pass){
       sweep(tri, x, phi, closest_tri, origin, dx, +1, +1, +1);
