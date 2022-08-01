@@ -237,8 +237,20 @@ int main(int argc, char* argv[]) {
     //Very hackily strip off file suffix.
     outname = filename.substr(0, filename.size()-4) + std::string(".sdf");
     std::cout << "Writing results to: " << outname << "\n";
+    std::ofstream outfile( outname.c_str(), std::ofstream::binary);
+    outfile.write((char*)&phi_grid.ni, sizeof(phi_grid.ni));
+    outfile.write((char*)&phi_grid.nj, sizeof(phi_grid.nj));
+    outfile.write((char*)&phi_grid.nk, sizeof(phi_grid.nk));
+    outfile.write((char*)&min_box, sizeof(min_box));
+    outfile.write((char*)&dx, sizeof(dx));
 
-    // 16 bit binary output implemented by sebbbi
+    enum class Format {
+      u16,
+      f32
+    };
+
+    // TODO: make this configurable via command line
+    Format outFormat = Format::f32;
     Vec3f diagonal = Vec3f(
         dx * float(phi_grid.ni),
         dx * float(phi_grid.nj),
@@ -246,21 +258,34 @@ int main(int argc, char* argv[]) {
 
     float diagonal_length = mag(diagonal);
 
-    std::vector<uint16_t> voxels_u16(phi_grid.a.size());
+    // normalize the distance with the size of the bounds
     for (unsigned long i = 0; i < phi_grid.a.size(); ++i)
     {
         float v = phi_grid.a[i];
         float v_01 = (v / diagonal_length) * 0.5f + 0.5f;
-        voxels_u16[i] = uint16_t(v_01 * 65535.0f);
+        phi_grid.a[i] = v_01;
     }
 
-    std::ofstream outfile( outname.c_str(), std::ofstream::binary);
-    outfile.write((char*)&phi_grid.ni, sizeof(phi_grid.ni));
-    outfile.write((char*)&phi_grid.nj, sizeof(phi_grid.nj));
-    outfile.write((char*)&phi_grid.nk, sizeof(phi_grid.nk));
-    outfile.write((char*)&min_box, sizeof(min_box));
-    outfile.write((char*)&dx, sizeof(dx));
-    outfile.write((char*)voxels_u16.data(), voxels_u16.size() * sizeof(uint16_t));
+    switch (outFormat) {
+      case Format::u16: {
+        // 16 bit binary output implemented by sebbbi
+
+        std::vector<uint16_t> voxels_u16(phi_grid.a.size());
+        for (unsigned long i = 0; i < phi_grid.a.size(); ++i)
+        {
+            voxels_u16[i] = uint16_t(phi_grid.a[i] * 65535.0f);
+        }
+
+        outfile.write((char*)voxels_u16.data(), voxels_u16.size() * sizeof(uint16_t));
+        break;
+      }
+
+      case Format::f32: {
+        outfile.write((char*)phi_grid.a.data, phi_grid.a.size() * sizeof(float));
+        break;
+      }
+    }
+
     outfile.close();
   #endif
 
