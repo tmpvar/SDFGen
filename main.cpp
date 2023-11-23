@@ -102,6 +102,17 @@ void read_stl_file(
   }
 }
 
+static unsigned int nextPowerOfTwo(unsigned int n) {
+  --n;
+
+  n |= n >> 1;
+  n |= n >> 2;
+  n |= n >> 4;
+  n |= n >> 8;
+  n |= n >> 16;
+
+  return n + 1;
+}
 
 int main(int argc, char* argv[]) {
 
@@ -185,9 +196,11 @@ int main(int argc, char* argv[]) {
   max_box += padmax*dx*unit;
   Vec3ui sizes = Vec3ui((max_box - min_box)/dx);
 
-  sizes[0] = align_up(sizes[0], align);
-  sizes[1] = align_up(sizes[1], align);
-  sizes[2] = align_up(sizes[2], align);
+  unsigned int diameter = std::max(std::max(nextPowerOfTwo(sizes[0]), nextPowerOfTwo(sizes[1])), nextPowerOfTwo(sizes[2]));
+
+  sizes[0] = diameter;//align_up(sizes[0], align);
+  sizes[1] = diameter;//align_up(sizes[1], align);
+  sizes[2] = diameter;//align_up(sizes[2], align);
 
   sizes += Vec3ui(padmax_postalign);
 
