@@ -194,25 +194,33 @@ int main(int argc, char* argv[]) {
   Vec3f unit(1,1,1);
   min_box -= padmin*dx*unit;
   max_box += padmax*dx*unit;
-  Vec3ui sizes = Vec3ui((max_box - min_box)/dx);
+
+  Vec3f center_box = (max_box + min_box) * 0.5f;
+
+  Vec3ui sizes = Vec3ui((max_box - min_box) / dx);
+  std::cout << "Bound box size (before): (" << min_box << ") to (" << max_box << ") with dimensions " << sizes << "." << std::endl;
 
   unsigned int diameter = std::max(std::max(nextPowerOfTwo(sizes[0]), nextPowerOfTwo(sizes[1])), nextPowerOfTwo(sizes[2]));
+  float radius = float(diameter) * 0.5f;
 
-  sizes[0] = diameter;//align_up(sizes[0], align);
-  sizes[1] = diameter;//align_up(sizes[1], align);
-  sizes[2] = diameter;//align_up(sizes[2], align);
+  sizes[0] = diameter;
+  sizes[1] = diameter;
+  sizes[2] = diameter;
 
-  sizes += Vec3ui(padmax_postalign);
+  min_box = center_box - Vec3f(radius);
+  max_box = center_box + Vec3f(radius);
 
-  std::cout << "Bound box size: (" << min_box << ") to (" << max_box << ") with dimensions " << sizes << "." << std::endl;
+  // sizes += Vec3ui(padmax_postalign);
+
+  std::cout << "Bound box size (after): (" << min_box << ") to (" << max_box << ") with dimensions " << sizes << "." << std::endl;
 
   std::cout << "Computing signed distance field.\n";
   Array3f phi_grid;
   make_level_set3(faceList, vertList, min_box, dx, sizes[0], sizes[1], sizes[2], phi_grid);
 
-  std::string outname;
+  std::ostringstream outname;
 
-  #ifdef HAVE_VTK
+#ifdef HAVE_VTK
     // If compiled with VTK, we can directly output a volumetric image format instead
     //Very hackily strip off file suffix.
     outname = filename.substr(0, filename.size()-4) + std::string(".vti");
@@ -248,9 +256,14 @@ int main(int argc, char* argv[]) {
   #else
     // if VTK support is missing, default back to the original ascii file-dump.
     //Very hackily strip off file suffix.
-    outname = filename.substr(0, filename.size()-4) + std::string(".sdf");
-    std::cout << "Writing results to: " << outname << "\n";
-    std::ofstream outfile( outname.c_str(), std::ofstream::binary);
+    outname
+      << filename.substr(0, filename.size()-4)
+      << "-c"
+      << diameter
+      << ".sdf";
+    std::cout << "Writing results to: " << outname.str() << "\n";
+    std::cout << "phi_grid: " << Vec3f(phi_grid.ni, phi_grid.nj, phi_grid.nk) << "\n";
+    std::ofstream outfile( outname.str().c_str(), std::ofstream::binary);
     outfile.write((char*)&phi_grid.ni, sizeof(phi_grid.ni));
     outfile.write((char*)&phi_grid.nj, sizeof(phi_grid.nj));
     outfile.write((char*)&phi_grid.nk, sizeof(phi_grid.nk));
