@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
   max_box += padmax*dx*unit;
 
   Vec3f center_box = (max_box + min_box) * 0.5f;
-
+  std::cout << "center: " << center_box << "\n";
   Vec3ui sizes = Vec3ui((max_box - min_box) / dx);
   std::cout << "Bound box size (before): (" << min_box << ") to (" << max_box << ") with dimensions " << sizes << "." << std::endl;
 
@@ -209,10 +209,10 @@ int main(int argc, char* argv[]) {
 
   min_box = center_box - Vec3f(radius);
   max_box = center_box + Vec3f(radius);
-
+  Vec3ui postSizes = Vec3ui((max_box - min_box) / dx);
   // sizes += Vec3ui(padmax_postalign);
 
-  std::cout << "Bound box size (after): (" << min_box << ") to (" << max_box << ") with dimensions " << sizes << "." << std::endl;
+  std::cout << "Bound box size (after): (" << min_box << ") to (" << max_box << ") with dimensions " << postSizes << "." << std::endl;
 
   std::cout << "Computing signed distance field.\n";
   Array3f phi_grid;
