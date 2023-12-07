@@ -258,14 +258,6 @@ int main(int argc, char* argv[]) {
 
     float diagonal_length = mag(diagonal);
 
-    // normalize the distance with the size of the bounds
-    for (unsigned long i = 0; i < phi_grid.a.size(); ++i)
-    {
-        float v = phi_grid.a[i];
-        float v_01 = (v / diagonal_length) * 0.5f + 0.5f;
-        phi_grid.a[i] = v_01;
-    }
-
     switch (outFormat) {
       case Format::u16: {
         // 16 bit binary output implemented by sebbbi
@@ -273,7 +265,8 @@ int main(int argc, char* argv[]) {
         std::vector<uint16_t> voxels_u16(phi_grid.a.size());
         for (unsigned long i = 0; i < phi_grid.a.size(); ++i)
         {
-            voxels_u16[i] = uint16_t(phi_grid.a[i] * 65535.0f);
+            float v = (phi_grid.a[i] / diagonal_length) * 0.5f + 0.5f;
+            voxels_u16[i] = uint16_t(v * 65535.0f);
         }
 
         outfile.write((char*)voxels_u16.data(), voxels_u16.size() * sizeof(uint16_t));
